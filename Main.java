@@ -1,196 +1,543 @@
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.*;
 
-// Класс для хранения имени
-class Name {
-    private String lastName;
-    private String firstName;
-    private String patronymic;
-
-    public Name(String lastName, String firstName, String patronymic) {
-        this.lastName = lastName;
-        this.firstName = firstName;
-        this.patronymic = patronymic;
+class Box<T> {
+    private T value;
+    
+    public Box() {
+        this.value = null;
     }
-
-    public Name(String firstName) { // только имя
-        this(null, firstName, null);
+    
+    public Box(T value) {
+        this.value = value;
     }
-
-    public Name(String lastName, String firstName) { // фамилия + имя
-        this(lastName, firstName, null);
+    
+    public T get() {
+        return value;
     }
-
-    public String getLastName() { return lastName; }
-    public String getFirstName() { return firstName; }
-    public String getPatronymic() { return patronymic; }
-
-    public void setLastName(String lastName) { this.lastName = lastName; }
-    public void setPatronymic(String patronymic) { this.patronymic = patronymic; }
-
+    
+    public void put(T newValue) {
+        if (value != null) {
+            throw new IllegalStateException("Коробка уже содержит значение!");
+        }
+        this.value = newValue;
+    }
+    
+    public T take() {
+        T temp = value;
+        value = null;
+        return temp;
+    }
+    
+    public boolean isEmpty() {
+        return value == null;
+    }
+    
+    public boolean isFull() {
+        return value != null;
+    }
+    
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        if (lastName != null) sb.append(lastName);
-        if (firstName != null) {
-            if (sb.length() > 0) sb.append(" ");
-            sb.append(firstName);
-        }
-        if (patronymic != null) {
-            if (sb.length() > 0) sb.append(" ");
-            sb.append(patronymic);
-        }
-        return sb.toString();
+        return "Box[" + (value != null ? value.toString() : "пусто") + "]";
     }
 }
 
-// Класс Человек
-class Person {
-    private Name name;
-    private int height;
-    private Person father;
-
-    public Person(Name name, int height) {
-        this.name = name;
-        this.height = height;
+class Storage<T> {
+    private final T value;
+    private final T alternative;
+    
+    public Storage(T value, T alternative) {
+        this.value = value;
+        this.alternative = alternative;
     }
-
-    public Person(Name name, int height, Person father) {
-        this.name = name;
-        this.height = height;
-        this.father = father;
+    
+    public T get() {
+        return value != null ? value : alternative;
     }
-
-    public void setFather(Person father) {
-        this.father = father;
-        // Если у человека нет фамилии, берём от отца
-        if ((name.getLastName() == null || name.getLastName().isEmpty()) && father != null && father.name.getLastName() != null) {
-            name.setLastName(father.name.getLastName());
-        }
-        // Если нет отчества, создаём от имени отца
-        if ((name.getPatronymic() == null || name.getPatronymic().isEmpty()) && father != null && father.name.getFirstName() != null) {
-            name.setPatronymic(father.name.getFirstName() + "ович");
-        }
-    }
-
+    
     @Override
     public String toString() {
-        return name.toString() + " (рост: " + height + ")";
+        return "Storage[value=" + value + ", alternative=" + alternative + "]";
     }
 }
 
-// Класс для Точки
-class Point {
-    private double x;
-    private double y;
-
-    public Point(double x, double y) { this.x = x; this.y = y; }
-
-    public double distanceTo(Point other) {
-        return Math.hypot(this.x - other.x, this.y - other.y);
-    }
-
-    public void shift(double dx, double dy) { x += dx; y += dy; }
-
-    @Override
-    public String toString() { return "(" + x + ";" + y + ")"; }
-}
-
-// Класс Ломаная линия
-class Polyline {
-    private List<Point> points;
-
-    public Polyline() { points = new ArrayList<>(); }
-    public Polyline(Point... pts) {
-        points = new ArrayList<>();
-        for (Point p : pts) points.add(p);
-    }
-
-    public void addPoints(Point... pts) { for (Point p : pts) points.add(p); }
-
-    public void shiftStart(double dx, double dy) {
-        if (!points.isEmpty()) {
-            points.get(0).shift(dx, dy);
+class BoxUtils {
+    public static double findMax(List<? extends Box<? extends Number>> boxes) {
+        if (boxes == null || boxes.isEmpty()) {
+            throw new IllegalArgumentException("Список коробок пуст или null");
         }
-    }
-
-    public double length() {
-        double len = 0;
-        for (int i = 1; i < points.size(); i++) {
-            len += points.get(i - 1).distanceTo(points.get(i));
+        
+        double max = Double.NEGATIVE_INFINITY;
+        for (Box<? extends Number> box : boxes) {
+            if (box.isFull()) {
+                Number value = box.get();
+                if (value != null) {
+                    double doubleValue = value.doubleValue();
+                    if (doubleValue > max) {
+                        max = doubleValue;
+                    }
+                }
+            }
         }
-        return len;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder("Линия [");
-        for (int i = 0; i < points.size(); i++) {
-            sb.append(points.get(i));
-            if (i < points.size() - 1) sb.append(", ");
-        }
-        sb.append("]");
-        return sb.toString();
+        
+        return max;
     }
 }
 
-// Главный класс
-public class Main {
+class FunctionalUtils {
+    public static <T, R> List<R> map(List<T> list, Function<T, R> function) {
+        List<R> result = new ArrayList<>();
+        for (T item : list) {
+            result.add(function.apply(item));
+        }
+        return result;
+    }
+    
+    public static <T> List<T> filter(List<T> list, Predicate<T> predicate) {
+        List<T> result = new ArrayList<>();
+        for (T item : list) {
+            if (predicate.test(item)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+    
+    public static <T> T reduce(List<T> list, BinaryOperator<T> operator) {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        
+        T result = list.get(0);
+        for (int i = 1; i < list.size(); i++) {
+            result = operator.apply(result, list.get(i));
+        }
+        return result;
+    }
+    
+    public static <T> T reduce(List<T> list, T identity, BinaryOperator<T> operator) {
+        T result = identity;
+        for (T item : list) {
+            result = operator.apply(result, item);
+        }
+        return result;
+    }
+    
+    public static <T, P> P collect(List<T> list, 
+                                   Supplier<P> supplier, 
+                                   BiConsumer<P, T> accumulator) {
+        P result = supplier.get();
+        for (T item : list) {
+            accumulator.accept(result, item);
+        }
+        return result;
+    }
+}
+
+public class Lab4 {
+    public static void processNumberStorage(Storage<Integer> storage) {
+        System.out.println("Извлечено из хранилища: " + storage.get());
+    }
+    
+    public static void processStringStorage(Storage<String> storage) {
+        System.out.println("Извлечено из хранилища: " + storage.get());
+    }
+    
+    public static void processBoxes(List<Box<? extends Number>> boxes) {
+        double max = BoxUtils.findMax(boxes);
+        System.out.println("Максимальное значение в коробках: " + max);
+    }
+    
+    static class StringLengthFunction implements Function<String, Integer> {
+        @Override
+        public Integer apply(String s) {
+            return s.length();
+        }
+    }
+    
+    static class AbsoluteValueFunction implements Function<Integer, Integer> {
+        @Override
+        public Integer apply(Integer x) {
+            return Math.abs(x);
+        }
+    }
+    
+    static class MaxArrayFunction implements Function<int[], Integer> {
+        @Override
+        public Integer apply(int[] arr) {
+            if (arr == null || arr.length == 0) return 0;
+            int max = arr[0];
+            for (int num : arr) {
+                if (num > max) max = num;
+            }
+            return max;
+        }
+    }
+    
+    static class StringLengthPredicate implements Predicate<String> {
+        @Override
+        public boolean test(String s) {
+            return s.length() >= 3;
+        }
+    }
+    
+    static class PositiveNumberPredicate implements Predicate<Integer> {
+        @Override
+        public boolean test(Integer x) {
+            return x > 0;
+        }
+    }
+    
+    static class NoPositiveArrayPredicate implements Predicate<int[]> {
+        @Override
+        public boolean test(int[] arr) {
+            for (int num : arr) {
+                if (num > 0) return false;
+            }
+            return true;
+        }
+    }
+    
+    static class StringConcatenator implements BinaryOperator<String> {
+        @Override
+        public String apply(String s1, String s2) {
+            return s1 + s2;
+        }
+    }
+    
+    static class IntegerSum implements BinaryOperator<Integer> {
+        @Override
+        public Integer apply(Integer a, Integer b) {
+            return a + b;
+        }
+    }
+    
+    static class NumberClassifier implements BiConsumer<Map<String, List<Integer>>, Integer> {
+        @Override
+        public void accept(Map<String, List<Integer>> map, Integer number) {
+            String key = number > 0 ? "positive" : "negative";
+            map.computeIfAbsent(key, k -> new ArrayList<>()).add(number);
+        }
+    }
+    
+    static class StringLengthGrouper implements BiConsumer<Map<Integer, List<String>>, String> {
+        @Override
+        public void accept(Map<Integer, List<String>> map, String str) {
+            int length = str.length();
+            map.computeIfAbsent(length, k -> new ArrayList<>()).add(str);
+        }
+    }
+    
+    public static int readInt(Scanner scanner, String prompt) {
+        System.out.print(prompt);
+        while (!scanner.hasNextInt()) {
+            System.out.println("Ошибка! Введите целое число.");
+            scanner.next();
+            System.out.print(prompt);
+        }
+        return scanner.nextInt();
+    }
+    
+    public static String readString(Scanner scanner, String prompt) {
+        System.out.print(prompt);
+        scanner.nextLine();
+        return scanner.nextLine();
+    }
+    
+    public static void demoBoxInteractive(Scanner scanner) {
+        System.out.println("\n=== Демонстрация работы с Коробкой ===");
+        
+        Box<Integer> intBox = new Box<>();
+        
+        System.out.println("1. Создана пустая коробка для целых чисел");
+        System.out.println("   Коробка пуста? " + intBox.isEmpty());
+        System.out.println("   Коробка заполнена? " + intBox.isFull());
+        
+        int value = readInt(scanner, "\n2. Введите число для размещения в коробке: ");
+        intBox.put(value);
+        System.out.println("   Число " + value + " размещено в коробке");
+        System.out.println("   Коробка пуста? " + intBox.isEmpty());
+        System.out.println("   Коробка заполнена? " + intBox.isFull());
+        System.out.println("   Содержимое коробки: " + intBox.get());
+        
+        System.out.println("\n3. Пытаемся разместить еще одно число...");
+        try {
+            intBox.put(999);
+        } catch (IllegalStateException e) {
+            System.out.println("   Ошибка: " + e.getMessage());
+        }
+        
+        System.out.println("\n4. Извлекаем значение из коробки...");
+        Integer extracted = intBox.take();
+        System.out.println("   Извлечено: " + extracted);
+        System.out.println("   Коробка пуста? " + intBox.isEmpty());
+        System.out.println("   Коробка заполнена? " + intBox.isFull());
+    }
+    
     public static void main(String[] args) {
-
-        System.out.println("=== Имена ===");
-        Name cleopatra = new Name("Клеопатра");
-        Name pushkin = new Name("Пушкин", "Александр", "Сергеевич");
-        Name mayakovsky = new Name("Маяковский", "Владимир");
-
-        System.out.println(cleopatra);
-        System.out.println(pushkin);
-        System.out.println(mayakovsky);
-
-        System.out.println("\n=== Люди с именами ===");
-        Person person1 = new Person(cleopatra, 152);
-        Person person2 = new Person(pushkin, 167);
-        Person person3 = new Person(mayakovsky, 189);
-
-        System.out.println(person1);
-        System.out.println(person2);
-        System.out.println(person3);
-
-        System.out.println("\n=== Люди с родителями ===");
-        Name ivanName = new Name("Чудова", "Иван");
-        Name petrName = new Name("Чудова", "Петр");
-        Name borisName = new Name(null, "Борис");
-
-        Person ivan = new Person(ivanName, 180);
-        Person petr = new Person(petrName, 175, ivan);
-        petr.setFather(ivan);
-        Person boris = new Person(borisName, 165, petr);
-        boris.setFather(petr);
-
-        System.out.println(ivan);
-        System.out.println(petr);
-        System.out.println(boris);
-
-        System.out.println("\n=== Ломаные линии ===");
-        Polyline poly1 = new Polyline(new Point(1,5), new Point(2,8), new Point(5,3));
-        Polyline poly2 = new Polyline(new Point(1,5), new Point(2,-5), new Point(4,-8), new Point(5,3));
-
-        System.out.println(poly1);
-        System.out.println(poly2);
-
-        System.out.println("\n=== Сдвиг начала первой ломаной ===");
-        poly1.shiftStart(1, 1); // смещаем начало на (1,1)
-        poly2.shiftStart(1, 1); // смещаем одновременно начало второй
-        System.out.println(poly1);
-        System.out.println(poly2);
-
-        System.out.println("\n=== Создание Ломаной и длина ===");
-        Polyline polyLength = new Polyline(new Point(1,5), new Point(2,8), new Point(5,3));
-        System.out.println(polyLength);
-        System.out.println("Длина: " + polyLength.length());
-
-        polyLength.addPoints(new Point(5,15), new Point(8,10));
-        System.out.println("После добавления точек: " + polyLength);
-        System.out.println("Длина: " + polyLength.length());
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("=== ЛАБОРАТОРНАЯ РАБОТА №4 ===");
+        
+        System.out.println("=== ЗАДАНИЕ 1 ===");
+        
+        demoBoxInteractive(scanner);
+        
+        System.out.println("\n--- Часть 1.1 (автоматическая демонстрация) ---");
+        Box<Integer> intBox = new Box<>();
+        intBox.put(3);
+        System.out.println("Коробка с числом 3: " + intBox);
+        
+        System.out.println("Передача коробки в метод и извлечение значения...");
+        Integer extractedValue = intBox.take();
+        System.out.println("Извлеченное значение: " + extractedValue);
+        
+        System.out.println("\n--- Часть 1.2: Хранилище ---");
+        
+        Storage<Integer> nullNumberStorage = new Storage<>(null, 0);
+        System.out.println("1. Хранилище чисел (null, альтернатива 0):");
+        processNumberStorage(nullNumberStorage);
+        
+        Storage<Integer> numberStorage = new Storage<>(99, -1);
+        System.out.println("\n2. Хранилище чисел (99, альтернатива -1):");
+        processNumberStorage(numberStorage);
+        
+        Storage<String> nullStringStorage = new Storage<>(null, "default");
+        System.out.println("\n3. Хранилище строк (null, альтернатива 'default'):");
+        processStringStorage(nullStringStorage);
+        
+        Storage<String> stringStorage = new Storage<>("hello", "default");
+        System.out.println("\n4. Хранилище строк ('hello', альтернатива 'default'):");
+        processStringStorage(stringStorage);
+        
+        System.out.println("\n" + "=".repeat(60) + "\n");
+        
+        System.out.println("=== ЗАДАНИЕ 2: ПОИСК МАКСИМУМА ===");
+        
+        List<Box<? extends Number>> boxes = new ArrayList<>();
+        
+        Box<Integer> box1 = new Box<>(10);
+        Box<Double> box2 = new Box<>(25.5);
+        Box<Long> box3 = new Box<>(100L);
+        Box<Float> box4 = new Box<>(15.75f);
+        Box<Integer> box5 = new Box<>();
+        
+        boxes.add(box1);
+        boxes.add(box2);
+        boxes.add(box3);
+        boxes.add(box4);
+        boxes.add(box5);
+        
+        System.out.println("Список коробок:");
+        for (int i = 0; i < boxes.size(); i++) {
+            System.out.println("  Коробка " + (i+1) + ": " + boxes.get(i));
+        }
+        
+        System.out.println("\nПоиск максимального значения...");
+        try {
+            double max = BoxUtils.findMax(boxes);
+            System.out.println("Максимальное значение: " + max);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Ошибка: " + e.getMessage());
+        }
+        
+        System.out.println("\n" + "=".repeat(60) + "\n");
+        
+        System.out.println("=== ЗАДАНИЕ 3: ФУНКЦИОНАЛЬНОЕ ПРОГРАММИРОВАНИЕ ===");
+        
+        System.out.println("\n--- 3.1 ФУНКЦИЯ (map) ---");
+        
+        List<String> strings1 = Arrays.asList("qwerty", "asdfg", "zx");
+        System.out.println("Пример 1 - Исходный список строк: " + strings1);
+        
+        List<Integer> lengths = FunctionalUtils.map(strings1, new StringLengthFunction());
+        System.out.println("Длины строк: " + lengths);
+        
+        List<Integer> numbers1 = Arrays.asList(1, -3, 7);
+        System.out.println("\nПример 2 - Исходный список чисел: " + numbers1);
+        
+        List<Integer> absolutes = FunctionalUtils.map(numbers1, new AbsoluteValueFunction());
+        System.out.println("Абсолютные значения: " + absolutes);
+        
+        List<int[]> arrays = Arrays.asList(
+            new int[]{1, 2, 3},
+            new int[]{-5, 0, 5},
+            new int[]{10, 20, 30, 40}
+        );
+        System.out.println("\nПример 3 - Исходный список массивов: ");
+        for (int[] arr : arrays) {
+            System.out.println("  " + Arrays.toString(arr));
+        }
+        
+        List<Integer> maxValues = FunctionalUtils.map(arrays, new MaxArrayFunction());
+        System.out.println("Максимальные значения массивов: " + maxValues);
+        
+        System.out.println("\n--- 3.2 ФИЛЬТР ---");
+        
+        List<String> strings2 = Arrays.asList("qwerty", "asdfg", "zx");
+        System.out.println("Пример 1 - Исходный список строк: " + strings2);
+        
+        List<String> filteredStrings = FunctionalUtils.filter(strings2, new StringLengthPredicate());
+        System.out.println("Строки длиной >= 3: " + filteredStrings);
+        
+        List<Integer> numbers2 = Arrays.asList(1, -3, 7);
+        System.out.println("\nПример 2 - Исходный список чисел: " + numbers2);
+        
+        List<Integer> positiveNumbers = FunctionalUtils.filter(numbers2, new PositiveNumberPredicate());
+        System.out.println("Положительные числа: " + positiveNumbers);
+        
+        List<int[]> arrays2 = Arrays.asList(
+            new int[]{-1, -2, -3},
+            new int[]{-5, 0, 5},
+            new int[]{-10, -20},
+            new int[]{1, 2, 3}
+        );
+        System.out.println("\nПример 3 - Исходный список массивов: ");
+        for (int[] arr : arrays2) {
+            System.out.println("  " + Arrays.toString(arr));
+        }
+        
+        List<int[]> noPositiveArrays = FunctionalUtils.filter(arrays2, new NoPositiveArrayPredicate());
+        System.out.println("Массивы без положительных элементов: ");
+        for (int[] arr : noPositiveArrays) {
+            System.out.println("  " + Arrays.toString(arr));
+        }
+        
+        System.out.println("\n--- 3.3 СОКРАЩЕНИЕ (reduce) ---");
+        
+        List<String> strings3 = Arrays.asList("qwerty", "asdfg", "zx");
+        System.out.println("Пример 1 - Исходный список строк: " + strings3);
+        
+        String concatenated = FunctionalUtils.reduce(strings3, new StringConcatenator());
+        System.out.println("Объединенная строка: " + concatenated);
+        
+        List<Integer> numbers3 = Arrays.asList(1, -3, 7);
+        System.out.println("\nПример 2 - Исходный список чисел: " + numbers3);
+        
+        Integer sum = FunctionalUtils.reduce(numbers3, new IntegerSum());
+        System.out.println("Сумма чисел: " + sum);
+        
+        List<List<Integer>> listOfLists = Arrays.asList(
+            Arrays.asList(1, 2, 3),
+            Arrays.asList(4, 5),
+            Arrays.asList(6, 7, 8, 9)
+        );
+        System.out.println("\nПример 3 - Исходный список списков: " + listOfLists);
+        
+        List<Integer> lengthsOfLists = FunctionalUtils.map(listOfLists, List::size);
+        System.out.println("Длины списков: " + lengthsOfLists);
+        
+        Integer totalElements = FunctionalUtils.reduce(lengthsOfLists, new IntegerSum());
+        System.out.println("Общее количество элементов: " + totalElements);
+        
+        System.out.println("\n--- Безопасная версия reduce (с identity) ---");
+        
+        List<String> emptyList = new ArrayList<>();
+        System.out.println("Пустой список: " + emptyList);
+        
+        String safeResult = FunctionalUtils.reduce(emptyList, "", new StringConcatenator());
+        System.out.println("Результат конкатенации (с identity): " + safeResult);
+        
+        System.out.println("\n--- 3.4 КОЛЛЕКЦИОНИРОВАНИЕ ---");
+        
+        List<Integer> numbers4 = Arrays.asList(1, -3, 7, -2, 0, -5, 10);
+        System.out.println("Пример 1 - Исходный список чисел: " + numbers4);
+        
+        Map<String, List<Integer>> numberGroups = FunctionalUtils.collect(
+            numbers4,
+            HashMap::new,
+            new NumberClassifier()
+        );
+        
+        System.out.println("Разделение чисел:");
+        System.out.println("  Положительные: " + numberGroups.getOrDefault("positive", new ArrayList<>()));
+        System.out.println("  Отрицательные: " + numberGroups.getOrDefault("negative", new ArrayList<>()));
+        
+        List<String> strings4 = Arrays.asList("qwerty", "asdfg", "zx", "qw");
+        System.out.println("\nПример 2 - Исходный список строк: " + strings4);
+        
+        Map<Integer, List<String>> stringGroups = FunctionalUtils.collect(
+            strings4,
+            HashMap::new,
+            new StringLengthGrouper()
+        );
+        
+        System.out.println("Группировка строк по длине:");
+        for (Map.Entry<Integer, List<String>> entry : stringGroups.entrySet()) {
+            System.out.println("  Длина " + entry.getKey() + ": " + entry.getValue());
+        }
+        
+        List<String> strings5 = Arrays.asList("qwerty", "asdfg", "qwerty", "qw");
+        System.out.println("\nПример 3 - Исходный список строк (с дубликатами): " + strings5);
+        
+        Set<String> uniqueStrings = FunctionalUtils.collect(
+            strings5,
+            HashSet::new,
+            Set::add
+        );
+        
+        System.out.println("Уникальные строки: " + uniqueStrings);
+        
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("=== ИНТЕРАКТИВНАЯ ДЕМОНСТРАЦИЯ ===");
+        
+        System.out.println("\nДемонстрация функциональных методов с вводом данных:");
+        
+        System.out.println("\n1. Введите список чисел через пробел:");
+        scanner.nextLine();
+        String numbersInput = scanner.nextLine();
+        
+        List<Integer> userNumbers = new ArrayList<>();
+        try {
+            String[] numberStrings = numbersInput.split("\\s+");
+            for (String numStr : numberStrings) {
+                if (!numStr.trim().isEmpty()) {
+                    userNumbers.add(Integer.parseInt(numStr.trim()));
+                }
+            }
+            
+            System.out.println("Ваш список чисел: " + userNumbers);
+            
+            List<Integer> userAbsolutes = FunctionalUtils.map(userNumbers, new AbsoluteValueFunction());
+            System.out.println("Абсолютные значения: " + userAbsolutes);
+            
+            List<Integer> userPositives = FunctionalUtils.filter(userNumbers, new PositiveNumberPredicate());
+            System.out.println("Положительные числа: " + userPositives);
+            
+            Integer userSum = FunctionalUtils.reduce(userNumbers, 0, new IntegerSum());
+            System.out.println("Сумма всех чисел: " + userSum);
+            
+        } catch (NumberFormatException e) {
+            System.out.println("Ошибка при разборе чисел!");
+        }
+        
+        System.out.println("\n2. Введите список строк (каждую с новой строки, пустая строка для завершения):");
+        List<String> userStrings = new ArrayList<>();
+        
+        while (true) {
+            System.out.print("Строка: ");
+            String line = scanner.nextLine();
+            if (line.isEmpty()) {
+                break;
+            }
+            userStrings.add(line);
+        }
+        
+        if (!userStrings.isEmpty()) {
+            System.out.println("Ваш список строк: " + userStrings);
+            
+            List<Integer> stringLengths = FunctionalUtils.map(userStrings, new StringLengthFunction());
+            System.out.println("Длины строк: " + stringLengths);
+            
+            List<String> longStrings = FunctionalUtils.filter(userStrings, s -> s.length() >= 3);
+            System.out.println("Строки длиной >= 3: " + longStrings);
+            
+            String concatenatedUser = FunctionalUtils.reduce(userStrings, "", new StringConcatenator());
+            System.out.println("Объединенная строка: " + concatenatedUser);
+        }
+        
+        scanner.close();
+        System.out.println("\n=== ПРОГРАММА ЗАВЕРШЕНА ===");
     }
 }
