@@ -48,3 +48,7 @@ mvn spring-boot:run
 
 ## XML-документация
 Файл документации: `docs/documentation.xml`.
+
+## Логическая модель БД
+<img width="2085" height="1624" alt="image" src="https://github.com/user-attachments/assets/621ddab8-93f6-4dca-8e68-a9de0283af53" />
+
