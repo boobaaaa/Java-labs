@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/library_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    # IMPORTANT:
+    # Для страниц книг/экземпляров/выдач контроллеры формируют DTO, обращаясь к связям @ManyToOne.
+    # Эти связи помечены как LAZY, поэтому при open-in-view=false возникает LazyInitializationException
+    # и вкладки "Книги", "Экземпляры", "Выдачи" не загружаются (таблицы пустые, кнопки "Добавить" не открывают формы).
+    # Самый простой фикс для учебного проекта — включить Open Session in View.
+    open-in-view: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+server:
+  port: 8080
